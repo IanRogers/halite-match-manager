@@ -162,8 +162,13 @@ class Manager:
 
 
     def run_rounds(self):
+        joust = len(self.players) ** 2
         with keyboard_detection() as key_pressed:
-            while not key_pressed() and ((self.rounds < 0) or (self.round_count < self.rounds)):
+            while not key_pressed() and \
+                    (self.rounds < 0 or
+                         (self.rounds == 0 and self.db.least_ngames() < joust) or
+                         self.round_count < self.rounds
+                     ):
                 num_contestants = random.choice([2] * 5 + [3] * 4 + [4] * 3 + [5] * 2 + [6])
                 contestants = self.pick_contestants(num_contestants)
                 size_w = random.choice([20, 25, 25] + [30] * 3 + [35] * 4 + [40] * 3 + [45, 45, 50])
@@ -246,6 +251,9 @@ class Database:
 
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])
+
+    def least_ngames(self):
+        return self.retrieve("select min(ngames) from players where active=1")[0][0]
 
     def get_player( self, names ):
         sql = 'select * from players where name=? '  + ' '.join('or name=?' for _ in names[1:])
@@ -335,6 +343,10 @@ class Commandline:
         self.parser.add_argument("-m", "--match", dest="match",
                                  action = "store_true", default = False,
                                  help = "Run a single match")
+
+        self.parser.add_argument("-j", "--joust", dest="joust",
+                                 action = "store_true", default = False,
+                                 help = "Run enough matches for the joust")
 
         self.parser.add_argument("-f", "--forever", dest="forever",
                                  action = "store_true", default = False,
@@ -428,11 +440,15 @@ class Commandline:
         
         elif self.cmds.showRanksTsv:
             self.manager.show_ranks(tsv=True)
-        
+
         elif self.cmds.match:
             print ("Running a single match.")
             self.run_matches(1)
-        
+
+        elif self.cmds.joust:
+            print("Running a league.")
+            self.run_matches(0)
+
         elif self.cmds.forever:
             print ("Running matches until interrupted. Press any key to exit safely at the end of the current match.")
             self.run_matches(-1)
