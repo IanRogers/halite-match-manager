@@ -162,8 +162,13 @@ class Manager:
 
 
     def run_rounds(self):
+        joust = len(self.players) ** 2
         with keyboard_detection() as key_pressed:
-            while not key_pressed() and ((self.rounds < 0) or (self.round_count < self.rounds)):
+            while not key_pressed() and \
+                    (self.rounds < 0 or
+                         (self.rounds == 0 and self.db.least_ngames() < joust) or
+                         self.round_count < self.rounds
+                     ):
                 num_contestants = random.choice([2] * 5 + [3] * 4 + [4] * 3 + [5] * 2 + [6])
                 contestants = self.pick_contestants(num_contestants)
                 size_w = random.choice([20, 25, 25] + [30] * 3 + [35] * 4 + [40] * 3 + [45, 45, 50])
@@ -241,8 +246,14 @@ class Database:
     def add_player(self, name, path):
         self.update("insert into players values(?,?,?,?,?,?,?,?,?,?)", (None, name, path, self.now(), 1000, 0.0, 25.0, 25.0/3.0, 0, True))
 
+    def clean_player(self, name):
+        self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
+
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])
+
+    def least_ngames(self):
+        return self.retrieve("select min(ngames) from players where active=1")[0][0]
 
     def get_player( self, names ):
         sql = 'select * from players where name=? '  + ' '.join('or name=?' for _ in names[1:])
@@ -309,6 +320,10 @@ class Commandline:
                                  action = "store", default = "",
                                  help = "Activate the named bot")
 
+        self.parser.add_argument("-c", "--cleanBot", dest="cleanBot",
+                                 action = "store", default = "",
+                                 help = "Clear resuls of the named bot")
+
         self.parser.add_argument("-d", "--deactivateBot", dest="deactivateBot",
                                  action = "store", default = "",
                                  help = "Deactivate the named bot")
@@ -328,6 +343,10 @@ class Commandline:
         self.parser.add_argument("-m", "--match", dest="match",
                                  action = "store_true", default = False,
                                  help = "Run a single match")
+
+        self.parser.add_argument("-j", "--joust", dest="joust",
+                                 action = "store_true", default = False,
+                                 help = "Run enough matches for the joust")
 
         self.parser.add_argument("-f", "--forever", dest="forever",
                                  action = "store_true", default = False,
@@ -355,6 +374,9 @@ class Commandline:
 
     def add_bot(self, bot, path):
         self.manager.add_player(bot, path)
+
+    def clean_bot(self, bot):
+        self.manager.db.clean_player(bot)
 
     def delete_bot(self, bot):
         self.manager.db.delete_player(bot)
@@ -392,11 +414,15 @@ class Commandline:
                 print ("You must specify the path for the new bot")
             elif self.valid_botfile(self.cmds.botPath):
                 self.add_bot(self.cmds.addBot, self.cmds.botPath)
-        
+
+        elif self.cmds.cleanBot:
+            print("Cleaning bot...")
+            self.clean_bot(self.cmds.cleanBot)
+
         elif self.cmds.deleteBot:
             print("Deleting bot...")
             self.delete_bot(self.cmds.deleteBot)
-        
+
         elif self.cmds.activateBot:
             print("Activating bot %s" %(self.cmds.activateBot))
             self.manager.db.activate_player(self.cmds.activateBot)
@@ -414,11 +440,15 @@ class Commandline:
         
         elif self.cmds.showRanksTsv:
             self.manager.show_ranks(tsv=True)
-        
+
         elif self.cmds.match:
             print ("Running a single match.")
             self.run_matches(1)
-        
+
+        elif self.cmds.joust:
+            print("Running a league.")
+            self.run_matches(0)
+
         elif self.cmds.forever:
             print ("Running matches until interrupted. Press any key to exit safely at the end of the current match.")
             self.run_matches(-1)
