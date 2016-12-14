@@ -246,7 +246,10 @@ class Database:
         self.update("insert into players values(?,?,?,?,?,?,?,?,?,?)", (None, name, path, self.now(), 1000, 0.0, 25.0, 25.0/3.0, 0, True))
 
     def clean_player(self, name):
-        self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
+        if name == "all":
+            self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3")
+        else:
+            self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
 
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])
@@ -321,7 +324,7 @@ class Commandline:
 
         self.parser.add_argument("-c", "--cleanBot", dest="cleanBot",
                                  action = "store", default = "",
-                                 help = "Clear resuls of the named bot")
+                                 help = "Clear results of the named bot (use name \"all\" to reset all players)")
 
         self.parser.add_argument("-d", "--deactivateBot", dest="deactivateBot",
                                  action = "store", default = "",
@@ -415,7 +418,10 @@ class Commandline:
                 self.add_bot(self.cmds.addBot, self.cmds.botPath)
 
         elif self.cmds.cleanBot:
-            print("Cleaning bot...")
+            if self.cmds.cleanBot == "all":
+                print("Cleaning all bots...")
+            else:
+                print("Cleaning bot %s" % self.cmds.cleanBot)
             self.clean_bot(self.cmds.cleanBot)
 
         elif self.cmds.deleteBot:
