@@ -162,11 +162,10 @@ class Manager:
 
 
     def run_rounds(self):
-        joust = len(self.players) ** 2
         with keyboard_detection() as key_pressed:
             while not key_pressed() and \
                     (self.rounds < 0 or
-                         (self.rounds == 0 and self.db.least_ngames() < joust) or
+                         (self.rounds == 0 and self.db.max_sigma() > 1.1) or
                          self.round_count < self.rounds
                      ):
                 num_contestants = random.choice([2] * 5 + [3] * 4 + [4] * 3 + [5] * 2 + [6])
@@ -252,8 +251,8 @@ class Database:
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])
 
-    def least_ngames(self):
-        return self.retrieve("select min(ngames) from players where active=1")[0][0]
+    def max_sigma(self):
+        return self.retrieve("select max(sigma) from players where active=1")[0][0]
 
     def get_player( self, names ):
         sql = 'select * from players where name=? '  + ' '.join('or name=?' for _ in names[1:])
@@ -346,7 +345,7 @@ class Commandline:
 
         self.parser.add_argument("-j", "--joust", dest="joust",
                                  action = "store_true", default = False,
-                                 help = "Run enough matches for the joust")
+                                 help = "Run enough matches for the joust (until all players have a low sigma)")
 
         self.parser.add_argument("-f", "--forever", dest="forever",
                                  action = "store_true", default = False,
@@ -446,7 +445,7 @@ class Commandline:
             self.run_matches(1)
 
         elif self.cmds.joust:
-            print("Running a league.")
+            print("Running a joust.")
             self.run_matches(0)
 
         elif self.cmds.forever:
