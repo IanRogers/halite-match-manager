@@ -241,6 +241,9 @@ class Database:
     def add_player(self, name, path):
         self.update("insert into players values(?,?,?,?,?,?,?,?,?,?)", (None, name, path, self.now(), 1000, 0.0, 25.0, 25.0/3.0, 0, True))
 
+    def clean_player(self, name):
+        self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
+
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])
 
@@ -309,6 +312,10 @@ class Commandline:
                                  action = "store", default = "",
                                  help = "Activate the named bot")
 
+        self.parser.add_argument("-c", "--cleanBot", dest="cleanBot",
+                                 action = "store", default = "",
+                                 help = "Clear resuls of the named bot")
+
         self.parser.add_argument("-d", "--deactivateBot", dest="deactivateBot",
                                  action = "store", default = "",
                                  help = "Deactivate the named bot")
@@ -356,6 +363,9 @@ class Commandline:
     def add_bot(self, bot, path):
         self.manager.add_player(bot, path)
 
+    def clean_bot(self, bot):
+        self.manager.db.clean_player(bot)
+
     def delete_bot(self, bot):
         self.manager.db.delete_player(bot)
 
@@ -392,11 +402,15 @@ class Commandline:
                 print ("You must specify the path for the new bot")
             elif self.valid_botfile(self.cmds.botPath):
                 self.add_bot(self.cmds.addBot, self.cmds.botPath)
-        
+
+        elif self.cmds.cleanBot:
+            print("Cleaning bot...")
+            self.clean_bot(self.cmds.cleanBot)
+
         elif self.cmds.deleteBot:
             print("Deleting bot...")
             self.delete_bot(self.cmds.deleteBot)
-        
+
         elif self.cmds.activateBot:
             print("Activating bot %s" %(self.cmds.activateBot))
             self.manager.db.activate_player(self.cmds.activateBot)
