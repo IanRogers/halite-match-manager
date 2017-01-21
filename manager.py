@@ -165,7 +165,7 @@ class Manager:
         with keyboard_detection() as key_pressed:
             while not key_pressed() and \
                     (self.rounds < 0 or
-                         (self.rounds == 0 and self.db.max_sigma() > 1.1) or
+                         (self.rounds == 0 and self.db.max_sigma() > 0.9) or
                          self.round_count < self.rounds
                      ):
                 num_contestants = random.choice([2] * 5 + [3] * 4 + [4] * 3 + [5] * 2 + [6])
@@ -247,9 +247,9 @@ class Database:
 
     def clean_player(self, name):
         if name == "all":
-            self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3")
+            self.update("update players set ngames=0,rank=1000,skill=0.0,mu=25.0,sigma=8.3")
         else:
-            self.update("update players set ngames=0,rank=0,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
+            self.update("update players set ngames=0,rank=1000,skill=0.0,mu=25.0,sigma=8.3 where name=?", [name])
 
     def delete_player(self, name):
         self.update("delete from players where name=?", [name])

@@ -5,3 +5,5 @@ ignore
 *.hlt
 orchid
 halite
+*.log
+
